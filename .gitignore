@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Data
+data/raw/
+data/bronze/
+data/silver/
+data/gold/
+*.csv
+*.parquet
+
+# Spark / Delta
+spark-warehouse/
+metastore_db/
+derby.log
+
+# JDBC drivers
+jars/*.jar
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+
+# Env
+.env
