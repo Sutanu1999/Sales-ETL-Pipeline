@@ -33,12 +33,23 @@ Sales-ETL-Pipeline/
 │   └── gold/        # Star schema Delta tables (gitignored)
 ├── src/
 │   ├── utils/
-│   │   └── spark_session.py    # Reusable Spark session with Delta support
+│   │   └── spark_session.py    # Reusable Spark session with Delta + JDBC support
 │   ├── 01_ingest_bronze.py      # Bronze layer ingestion
-│   └── 02_transform_silver.py   # Silver layer cleaning
+│   ├── 02_transform_silver.py   # Silver layer cleaning
+│   └── 03_build_gold.py         # Gold layer star schema
 ├── requirements.txt
 └── README.md
 ```
+
+## Star Schema (Gold Layer)
+
+- **dim_customer** — customer_id, location
+- **dim_product** — product_id, category (joined with English translation), dimensions
+- **dim_seller** — seller_id, location
+- **dim_date** — generated calendar dimension spanning the order date range
+- **fact_order_items** — grain: one row per order item (price, freight, order status/date)
+- **fact_payments** — grain: one row per payment installment
+- **fact_reviews** — grain: one row per review
 
 ## Setup
 
@@ -64,10 +75,13 @@ python src/02_transform_silver.py
 Cleans, deduplicates, and standardizes each bronze table (null-key filtering, type casting, text normalization). Notably removes ~3.4K duplicate reviews and ~280K duplicate geolocation entries present in the raw data.
 
 ### Gold layer (star schema)
-🚧 Planned
+```bash
+python src/03_build_gold.py
+```
+Builds 4 dimension tables and 3 fact tables (order items, payments, reviews) from the silver layer, ready for analytical querying.
 
 ### Load to MySQL warehouse
-🚧 Planned
+🚧 In progress
 
 ### Airflow orchestration
 🚧 Planned
@@ -77,7 +91,7 @@ Cleans, deduplicates, and standardizes each bronze table (null-key filtering, ty
 - [x] Project setup
 - [x] Bronze layer ingestion
 - [x] Silver layer cleaning
-- [ ] Gold layer star schema
+- [x] Gold layer star schema
 - [ ] MySQL warehouse load
 - [ ] Airflow DAG
 - [ ] Data quality checks
