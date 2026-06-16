@@ -31,12 +31,16 @@ Sales-ETL-Pipeline/
 │   ├── bronze/      # Raw Delta tables (gitignored)
 │   ├── silver/      # Cleaned Delta tables (gitignored)
 │   └── gold/        # Star schema Delta tables (gitignored)
+├── jars/
+│   └── mysql-connector-j-9.7.0.jar   # MySQL JDBC driver (gitignored)
 ├── src/
 │   ├── utils/
 │   │   └── spark_session.py    # Reusable Spark session with Delta + JDBC support
 │   ├── 01_ingest_bronze.py      # Bronze layer ingestion
 │   ├── 02_transform_silver.py   # Silver layer cleaning
-│   └── 03_build_gold.py         # Gold layer star schema
+│   ├── 03_build_gold.py         # Gold layer star schema
+│   └── 04_load_warehouse.py     # Load gold tables into MySQL
+├── .env                          # MySQL credentials (gitignored, not committed)
 ├── requirements.txt
 └── README.md
 ```
@@ -59,6 +63,15 @@ Sales-ETL-Pipeline/
    pip install -r requirements.txt
    ```
 3. Download the [Olist dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) and extract the CSVs into `data/raw/`
+4. Download [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/) and place the jar in `jars/`
+5. Create a MySQL database (`CREATE DATABASE sales_dw;`) and add a `.env` file with:
+   ```
+   MYSQL_USER=root
+   MYSQL_PASSWORD=your_password
+   MYSQL_HOST=localhost
+   MYSQL_PORT=3306
+   MYSQL_DATABASE=sales_dw
+   ```
 
 ## Running the Pipeline
 
@@ -81,7 +94,10 @@ python src/03_build_gold.py
 Builds 4 dimension tables and 3 fact tables (order items, payments, reviews) from the silver layer, ready for analytical querying.
 
 ### Load to MySQL warehouse
-🚧 In progress
+```bash
+python src/04_load_warehouse.py
+```
+Loads all 7 gold tables into the `sales_dw` MySQL database via JDBC.
 
 ### Airflow orchestration
 🚧 Planned
@@ -92,7 +108,8 @@ Builds 4 dimension tables and 3 fact tables (order items, payments, reviews) fro
 - [x] Bronze layer ingestion
 - [x] Silver layer cleaning
 - [x] Gold layer star schema
-- [ ] MySQL warehouse load
+- [x] MySQL warehouse load
 - [ ] Airflow DAG
 - [ ] Data quality checks
+- [ ] Analytical SQL queries
 - [ ] Dashboard (optional)
