@@ -33,6 +33,8 @@ Sales-ETL-Pipeline/
 │   └── gold/        # Star schema Delta tables (gitignored)
 ├── jars/
 │   └── mysql-connector-j-9.7.0.jar   # MySQL JDBC driver (gitignored)
+├── sql/
+│   └── analysis_queries.sql      # Analytical queries on the warehouse
 ├── src/
 │   ├── utils/
 │   │   └── spark_session.py    # Reusable Spark session with Delta + JDBC support
@@ -42,7 +44,8 @@ Sales-ETL-Pipeline/
 │   └── 04_load_warehouse.py     # Load gold tables into MySQL
 ├── .env                          # MySQL credentials (gitignored, not committed)
 ├── requirements.txt
-└── README.md
+├── README.md
+└── INSIGHTS.md                   # Key findings from the warehouse
 ```
 
 ## Star Schema (Gold Layer)
@@ -99,6 +102,12 @@ python src/04_load_warehouse.py
 ```
 Loads all 7 gold tables into the `sales_dw` MySQL database via JDBC.
 
+### Run analysis queries
+```bash
+mysql -u root -p sales_dw < sql/analysis_queries.sql
+```
+10 queries covering revenue trends, top categories/sellers, payment mix, review scores, and order status. See [INSIGHTS.md](INSIGHTS.md) for key findings.
+
 ### Airflow orchestration
 🚧 Planned
 
@@ -109,7 +118,7 @@ Loads all 7 gold tables into the `sales_dw` MySQL database via JDBC.
 - [x] Silver layer cleaning
 - [x] Gold layer star schema
 - [x] MySQL warehouse load
+- [x] Analytical SQL queries
 - [ ] Airflow DAG
 - [ ] Data quality checks
-- [ ] Analytical SQL queries
 - [ ] Dashboard (optional)
