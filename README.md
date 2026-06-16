@@ -33,8 +33,9 @@ Sales-ETL-Pipeline/
 │   └── gold/        # Star schema Delta tables (gitignored)
 ├── src/
 │   ├── utils/
-│   │   └── spark_session.py   # Reusable Spark session with Delta support
-│   └── 01_ingest_bronze.py     # Bronze layer ingestion
+│   │   └── spark_session.py    # Reusable Spark session with Delta support
+│   ├── 01_ingest_bronze.py      # Bronze layer ingestion
+│   └── 02_transform_silver.py   # Silver layer cleaning
 ├── requirements.txt
 └── README.md
 ```
@@ -57,7 +58,10 @@ python src/01_ingest_bronze.py
 Reads all 9 raw CSVs and writes them as Delta tables in `data/bronze/`.
 
 ### Silver layer (cleaning)
-🚧 In progress
+```bash
+python src/02_transform_silver.py
+```
+Cleans, deduplicates, and standardizes each bronze table (null-key filtering, type casting, text normalization). Notably removes ~3.4K duplicate reviews and ~280K duplicate geolocation entries present in the raw data.
 
 ### Gold layer (star schema)
 🚧 Planned
@@ -72,7 +76,7 @@ Reads all 9 raw CSVs and writes them as Delta tables in `data/bronze/`.
 
 - [x] Project setup
 - [x] Bronze layer ingestion
-- [ ] Silver layer cleaning
+- [x] Silver layer cleaning
 - [ ] Gold layer star schema
 - [ ] MySQL warehouse load
 - [ ] Airflow DAG
