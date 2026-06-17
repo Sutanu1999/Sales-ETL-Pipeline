@@ -23,6 +23,9 @@ jars/*.jar
 # Airflow
 airflow/logs/
 airflow/airflow.db
+airflow/plugins/
+airflow/config/
 
 # Env
 .env
+.env.docker

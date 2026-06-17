@@ -6,19 +6,20 @@ End-to-end batch ETL pipeline using PySpark, Delta Lake, Airflow, and MySQL — 
 
 ```
 Raw CSVs --> Bronze (Delta) --> Silver (cleaned) --> Gold (star schema) --> MySQL warehouse
+                              orchestrated by Airflow (Docker)
 ```
 
 - **Bronze**: Raw data ingested as-is into Delta tables, with minimal transformation (schema inference + ingestion metadata)
 - **Silver**: Cleaned, deduplicated, type-corrected data
 - **Gold**: Star schema (fact and dimension tables) ready for analytics
 - **Warehouse**: Gold tables loaded into MySQL for SQL querying
-- **Orchestration**: Apache Airflow (Docker) to schedule the pipeline
+- **Orchestration**: Apache Airflow (Docker), running a custom image with PySpark/Delta/Java, schedules and chains all 4 pipeline stages
 
 ## Tech Stack
 
 - PySpark (local mode)
 - Delta Lake
-- Apache Airflow (Docker)
+- Apache Airflow (Docker, custom image)
 - MySQL
 - Dataset: [Olist Brazilian E-commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 
@@ -42,10 +43,19 @@ Sales-ETL-Pipeline/
 │   ├── 02_transform_silver.py   # Silver layer cleaning
 │   ├── 03_build_gold.py         # Gold layer star schema
 │   └── 04_load_warehouse.py     # Load gold tables into MySQL
-├── .env                          # MySQL credentials (gitignored, not committed)
+├── airflow/
+│   ├── dags/
+│   │   └── sales_etl_dag.py      # Orchestrates all 4 pipeline stages
+│   ├── logs/                      # Airflow task logs (gitignored, runtime-generated)
+│   ├── plugins/                   # Airflow plugins (gitignored, empty/unused currently)
+│   ├── config/                    # Airflow config overrides (gitignored, empty/unused currently)
+│   ├── Dockerfile                 # Custom Airflow image with Java + PySpark + Delta
+│   └── docker-compose.yaml        # Airflow services (webserver, scheduler, worker, etc.)
+├── .env                           # MySQL credentials for venv runs (gitignored)
+├── .env.docker                    # MySQL credentials for Airflow/Docker runs (gitignored)
 ├── requirements.txt
 ├── README.md
-└── INSIGHTS.md                   # Key findings from the warehouse
+└── INSIGHTS.md                    # Key findings from the warehouse
 ```
 
 ## Star Schema (Gold Layer)
@@ -75,6 +85,7 @@ Sales-ETL-Pipeline/
    MYSQL_PORT=3306
    MYSQL_DATABASE=sales_dw
    ```
+6. For Airflow, also create `.env.docker` with the same values but `MYSQL_HOST=host.docker.internal`
 
 ## Running the Pipeline
 
@@ -109,7 +120,11 @@ mysql -u root -p sales_dw < sql/analysis_queries.sql
 10 queries covering revenue trends, top categories/sellers, payment mix, review scores, and order status. See [INSIGHTS.md](INSIGHTS.md) for key findings.
 
 ### Airflow orchestration
-🚧 Planned
+```bash
+cd airflow
+docker compose up -d
+```
+Open `http://localhost:8080` (default login: airflow/airflow), enable the `sales_etl_pipeline` DAG, and trigger it. All 4 stages (bronze → silver → gold → warehouse load) run in sequence inside Docker, using a custom Airflow image with Java, PySpark, and Delta Lake preinstalled.
 
 ## Status
 
@@ -119,6 +134,6 @@ mysql -u root -p sales_dw < sql/analysis_queries.sql
 - [x] Gold layer star schema
 - [x] MySQL warehouse load
 - [x] Analytical SQL queries
-- [ ] Airflow DAG
+- [x] Airflow DAG (Docker, custom image with PySpark/Delta/Java)
 - [ ] Data quality checks
 - [ ] Dashboard (optional)
