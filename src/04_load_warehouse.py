@@ -1,6 +1,10 @@
 """
 Load Gold Layer to MySQL Warehouse
 Reads gold Delta tables and writes them to MySQL via JDBC.
+
+Loads .env (localhost) when run directly from venv, or .env.docker
+(host.docker.internal) when run inside the Airflow container
+(RUNNING_IN_DOCKER=true is set by the DAG's bash command).
 """
 
 import os
@@ -10,7 +14,8 @@ from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
 from spark_session import get_spark_session
 
-load_dotenv()
+env_file = ".env.docker" if os.getenv("RUNNING_IN_DOCKER") else ".env"
+load_dotenv(env_file)
 
 GOLD_DIR = "data/gold"
 
@@ -54,8 +59,8 @@ def load_table_to_mysql(spark, table_name):
 if __name__ == "__main__":
     if not all([MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE]):
         raise ValueError(
-            "Missing MySQL credentials. Check that .env contains "
-            "MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DATABASE."
+            "Missing MySQL credentials. Check that the correct .env file "
+            "contains MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DATABASE."
         )
 
     spark = get_spark_session("LoadWarehouse")
