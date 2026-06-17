@@ -5,15 +5,16 @@ End-to-end batch ETL pipeline using PySpark, Delta Lake, Airflow, and MySQL — 
 ## Architecture
 
 ```
-Raw CSVs --> Bronze (Delta) --> Silver (cleaned) --> Gold (star schema) --> MySQL warehouse
+Raw CSVs --> Bronze (Delta) --> Silver (cleaned) --> Gold (star schema) --> DQ checks --> MySQL warehouse
                               orchestrated by Airflow (Docker)
 ```
 
 - **Bronze**: Raw data ingested as-is into Delta tables, with minimal transformation (schema inference + ingestion metadata)
 - **Silver**: Cleaned, deduplicated, type-corrected data
 - **Gold**: Star schema (fact and dimension tables) ready for analytics
+- **Data Quality**: Row count, null, uniqueness, value-range, and referential integrity checks gate the warehouse load
 - **Warehouse**: Gold tables loaded into MySQL for SQL querying
-- **Orchestration**: Apache Airflow (Docker), running a custom image with PySpark/Delta/Java, schedules and chains all 4 pipeline stages
+- **Orchestration**: Apache Airflow (Docker), running a custom image with PySpark/Delta/Java, schedules and chains all 5 pipeline stages
 
 ## Tech Stack
 
@@ -42,10 +43,11 @@ Sales-ETL-Pipeline/
 │   ├── 01_ingest_bronze.py      # Bronze layer ingestion
 │   ├── 02_transform_silver.py   # Silver layer cleaning
 │   ├── 03_build_gold.py         # Gold layer star schema
-│   └── 04_load_warehouse.py     # Load gold tables into MySQL
+│   ├── 04_load_warehouse.py     # Load gold tables into MySQL
+│   └── 05_data_quality_checks.py # Validates silver/gold tables before warehouse load
 ├── airflow/
 │   ├── dags/
-│   │   └── sales_etl_dag.py      # Orchestrates all 4 pipeline stages
+│   │   └── sales_etl_dag.py      # Orchestrates all 5 pipeline stages
 │   ├── logs/                      # Airflow task logs (gitignored, runtime-generated)
 │   ├── plugins/                   # Airflow plugins (gitignored, empty/unused currently)
 │   ├── config/                    # Airflow config overrides (gitignored, empty/unused currently)
@@ -107,11 +109,17 @@ python src/03_build_gold.py
 ```
 Builds 4 dimension tables and 3 fact tables (order items, payments, reviews) from the silver layer, ready for analytical querying.
 
+### Data quality checks
+```bash
+python src/05_data_quality_checks.py
+```
+Validates row counts, null/key integrity, uniqueness, value ranges, and referential integrity between fact and dimension tables. Exits with a non-zero code if any check fails, so Airflow can halt the pipeline before loading bad data into the warehouse.
+
 ### Load to MySQL warehouse
 ```bash
 python src/04_load_warehouse.py
 ```
-Loads all 7 gold tables into the `sales_dw` MySQL database via JDBC.
+Loads all 7 gold tables into the `sales_dw` MySQL database via JDBC (idempotent overwrite — safe to re-run).
 
 ### Run analysis queries
 ```bash
@@ -124,7 +132,7 @@ mysql -u root -p sales_dw < sql/analysis_queries.sql
 cd airflow
 docker compose up -d
 ```
-Open `http://localhost:8080` (default login: airflow/airflow), enable the `sales_etl_pipeline` DAG, and trigger it. All 4 stages (bronze → silver → gold → warehouse load) run in sequence inside Docker, using a custom Airflow image with Java, PySpark, and Delta Lake preinstalled.
+Open `http://localhost:8080` (default login: airflow/airflow), enable the `sales_etl_pipeline` DAG, and trigger it. All 5 stages (bronze → silver → gold → data quality checks → warehouse load) run in sequence inside Docker, using a custom Airflow image with Java, PySpark, and Delta Lake preinstalled.
 
 ## Status
 
@@ -135,5 +143,5 @@ Open `http://localhost:8080` (default login: airflow/airflow), enable the `sales
 - [x] MySQL warehouse load
 - [x] Analytical SQL queries
 - [x] Airflow DAG (Docker, custom image with PySpark/Delta/Java)
-- [ ] Data quality checks
+- [x] Data quality checks
 - [ ] Dashboard (optional)
