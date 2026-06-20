@@ -64,6 +64,21 @@ def check_non_negative(df, table_name, columns):
         check(negative_count == 0, f"{table_name}.{col_name}: no negative values (found: {negative_count})")
 
 
+def check_value_range(df, table_name, column, min_value, max_value):
+    """
+    Checks that all non-null values in a numeric column fall within [min_value, max_value].
+    Catches type/content corruption (e.g. text accidentally landing in a numeric column)
+    that structural checks like null/uniqueness/non-negative would miss.
+    """
+    out_of_range_count = df.filter(
+        df[column].isNotNull() & ((df[column] < min_value) | (df[column] > max_value))
+    ).count()
+    check(
+        out_of_range_count == 0,
+        f"{table_name}.{column}: all values within [{min_value}, {max_value}] (found {out_of_range_count} out of range)",
+    )
+
+
 def check_referential_integrity(fact_df, fact_key, dim_df, dim_key, fact_name, dim_name):
     orphan_count = (
         fact_df.select(fact_key)
@@ -97,6 +112,12 @@ def run_silver_checks(spark):
     order_payments = read_delta(spark, SILVER_DIR, "order_payments")
     check_non_negative(order_payments, "silver.order_payments", ["payment_value"])
 
+    order_reviews = read_delta(spark, SILVER_DIR, "order_reviews")
+    check_not_empty(order_reviews, "silver.order_reviews")
+    check_no_nulls(order_reviews, "silver.order_reviews", ["review_id", "order_id"])
+    check_unique_key(order_reviews, "silver.order_reviews", ["review_id"])
+    check_value_range(order_reviews, "silver.order_reviews", "review_score", 1, 5)
+
     products = read_delta(spark, SILVER_DIR, "products")
     check_unique_key(products, "silver.products", ["product_id"])
 
@@ -124,6 +145,8 @@ def run_gold_checks(spark):
 
     check_non_negative(fact_order_items, "gold.fact_order_items", ["price", "freight_value"])
     check_non_negative(fact_payments, "gold.fact_payments", ["payment_value"])
+    check_value_range(fact_reviews, "gold.fact_reviews", "review_score", 1, 5)
+    check_unique_key(fact_reviews, "gold.fact_reviews", ["review_id"])
 
     # Referential integrity: every fact_order_items row should map to a real customer/seller/product
     check_referential_integrity(

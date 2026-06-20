@@ -31,7 +31,7 @@ def read_bronze(spark, table_name):
 def write_silver(df, table_name):
     df = df.withColumn("_processed_at", current_timestamp())
     path = os.path.join(SILVER_DIR, table_name)
-    df.write.format("delta").mode("overwrite").save(path)
+    df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(path)
     print(f"  -> Silver written: {table_name} ({df.count()} rows)\n")
 
 
