@@ -38,6 +38,8 @@ def ingest_to_bronze(spark):
         df = (
             spark.read.option("header", "true")
             .option("inferSchema", "true")
+            .option("multiLine", "true")
+            .option("escape", '"')
             .csv(raw_path)
         )
 
@@ -49,7 +51,7 @@ def ingest_to_bronze(spark):
         print(f"  -> {row_count} rows")
 
         print(f"Writing to bronze: {bronze_path}")
-        df.write.format("delta").mode("overwrite").save(bronze_path)
+        df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(bronze_path)
         print(f"  -> Done: {table_name}\n")
 
 
